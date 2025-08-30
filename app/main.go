@@ -37,14 +37,18 @@ func main() {
 
 func matchLine(line []byte, pattern string) (bool, error) {
 
-	if pattern == "\\d" {
-		for i := range line {
-			if line[i] >= '0' && line[i] <= '9' {
-				return true, nil
-			}
-		}
-		return false, nil
+	if pattern == "\\w" {
+		validAlpha := isAlpha(line)
+		validDigit := isDigit(line)
+
+		return validAlpha || validDigit, nil
 	}
+	if pattern == "\\d" {
+
+		ok := isDigit(line)
+		return ok, nil
+	}
+
 	if utf8.RuneCountInString(pattern) != 1 {
 		return false, fmt.Errorf("unsupported pattern: %q", pattern)
 	}
@@ -56,4 +60,26 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	ok = bytes.ContainsAny(line, pattern)
 
 	return ok, nil
+}
+
+func isDigit(line []byte) bool {
+
+	//since line[i] returns the decimal of the byte value, we can compare directly
+	// to '0' and '9'
+	for i := range line {
+		if line[i] >= '0' && line[i] <= '9' {
+			return true
+		}
+	}
+	return false
+
+}
+
+func isAlpha(line []byte) bool {
+	for i := range line {
+		if (line[i] >= 'a' && line[i] <= 'z') || (line[i] >= 'A' && line[i] <= 'Z') || (line[i] == '_') {
+			return true
+		}
+	}
+	return false
 }
