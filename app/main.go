@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -42,6 +43,10 @@ func matchLine(line []byte, pattern string) (bool, error) {
 		validDigit := isDigit(line)
 
 		return validAlpha || validDigit, nil
+	}
+
+	if pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
+		return matchPositiveCharacter(line, pattern), nil
 	}
 	if pattern == "\\d" {
 
@@ -81,5 +86,30 @@ func isAlpha(line []byte) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func matchPositiveCharacter(line []byte, pattern string) bool {
+
+	pattern = pattern[1 : len(pattern)-1]
+
+	fmt.Println("my pattern", pattern)
+
+	chars := strings.Split(pattern, "")
+
+	fmt.Println("chars", chars)
+
+	set := make(map[byte]struct{})
+	for _, v := range chars {
+		set[v[0]] = struct{}{}
+	}
+
+	for i := range line {
+
+		if _, ok := set[line[i]]; ok {
+			return true
+		}
+	}
+
 	return false
 }
