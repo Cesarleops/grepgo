@@ -46,8 +46,12 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	}
 
 	if pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
+		if pattern[1] == '^' {
+			return matchNegativeGroupCharacter(line), nil
+		}
 		return matchPositiveCharacter(line, pattern), nil
 	}
+
 	if pattern == "\\d" {
 
 		ok := isDigit(line)
@@ -93,11 +97,7 @@ func matchPositiveCharacter(line []byte, pattern string) bool {
 
 	pattern = pattern[1 : len(pattern)-1]
 
-	fmt.Println("my pattern", pattern)
-
 	chars := strings.Split(pattern, "")
-
-	fmt.Println("chars", chars)
 
 	set := make(map[byte]struct{})
 	for _, v := range chars {
@@ -107,6 +107,29 @@ func matchPositiveCharacter(line []byte, pattern string) bool {
 	for i := range line {
 
 		if _, ok := set[line[i]]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func matchNegativeGroupCharacter(line []byte, pattern string) bool {
+
+	//Trick here is checking if there is one char different from the ones in the pattern.
+	pattern = pattern[2 : len(pattern)-1]
+
+	chars := strings.Split(pattern, "")
+
+	set := make(map[byte]struct{})
+
+	for _, v := range chars {
+		set[v[0]] = struct{}{}
+	}
+
+	for i := range line {
+
+		if _, ok := set[line[i]]; !ok {
 			return true
 		}
 	}
