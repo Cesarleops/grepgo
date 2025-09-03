@@ -121,6 +121,7 @@ func matchNegativeGroupCharacter(line []byte, pattern string) bool {
 
 	chars := strings.Split(pattern, "")
 
+	fmt.Println("chars", chars)
 	set := make(map[byte]struct{})
 
 	for _, v := range chars {
