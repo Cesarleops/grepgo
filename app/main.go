@@ -38,6 +38,10 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	for i := 0; i < len(line); i++ {
 		isMatch := match(pattern, line[i:])
 
+		if pattern[0] == '^' && !isMatch {
+			break
+		}
+
 		if isMatch {
 			return true, nil
 		}
@@ -106,6 +110,16 @@ func match(pattern string, text []byte) bool {
 		}
 
 	}
+
+	if pattern[0] == '^' {
+		isAMatch, newText, newPattern := matchStartAnchor(text, pattern[1:])
+		if !isAMatch {
+			return false
+		} else {
+			return match(newPattern, newText)
+		}
+	}
+
 	fmt.Println("normal check")
 	if pattern[0] == text[0] {
 		fmt.Println("normal match")
@@ -181,4 +195,18 @@ func matchNegativeGroupCharacter(c byte, pattern string) (bool, string) {
 
 	return true, pattern[i+1:]
 
+}
+
+func matchStartAnchor(text []byte, pattern string) (bool, []byte, string) {
+
+	i := 0
+	for i < len(pattern) {
+		if text[i] != pattern[i] {
+
+			return false, nil, ""
+		}
+		i++
+	}
+
+	return true, text[i:], pattern[i:]
 }
