@@ -21,6 +21,7 @@ func main() {
 	}
 
 	ok, err := matchLine(line, pattern)
+	fmt.Println("match", ok)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(2)
@@ -34,16 +35,15 @@ func main() {
 }
 
 func matchLine(line []byte, pattern string) (bool, error) {
-
-	for i := 0; i < len(line); i++ {
-		isMatch := match(pattern, line[i:])
-		fmt.Println("match", isMatch)
-
-		if pattern[0] == '^' && !isMatch {
-			fmt.Println("do i get here")
-			break
+	if pattern[0] == '^' {
+		v := match(pattern[1:], line)
+		if !v {
+			return false, nil
 		}
+	}
+	for i := 0; i < len(line); i++ {
 
+		isMatch := match(pattern, line[i:])
 		if isMatch {
 			return true, nil
 		}
@@ -58,21 +58,46 @@ func match(pattern string, text []byte) bool {
 	println("pattern len", len(pattern))
 	println("text len", len(text))
 
+	//This is our base case, if we reach the point were we consumed all the pattern
+	// without failure, it means we've found a match
 	if len(pattern) == 0 {
-		fmt.Println("nice")
 		return true
 	}
 
-	// if len(pattern) > 0 && len(text) == 0 {
-	// 	fmt.Println("fail")
-	// 	return false
-	// }
-
 	println("current pattern", pattern)
 	println("current text", string(text))
+	if len(pattern) > 1 && pattern[1] == '+' {
+		//Here we need to answer the question, are you the letter x, or any of the letters
+		// after you are equal to x
+		letterToMatch := pattern[0]
+		fmt.Println("letter to match", string(letterToMatch))
+		//ca+r  caaaaaarla
+		if text[0] != letterToMatch {
+			fmt.Println("ups")
+			return false
+		}
+		i := 1
 
-	if pattern[0] == '\\' {
+		//Need to be careful of not consuming the character in the pattern right after the +
+		// even if its the same
+		for i < len(text) {
 
+			if text[i] != letterToMatch {
+				break
+			}
+			i++
+		}
+
+		if pattern[2] == letterToMatch {
+			return match(pattern[2:], text[i-1:])
+		}
+		return match(pattern[2:], text[i:])
+
+	}
+
+	//If the current char in the pattern it's a slash, it means is a character class
+	// and we need to handle it in a special way.
+	if pattern[0] == '\\' && len(text) > 0 {
 		if pattern[1] == 'd' {
 			isAMatch := isDigit(text[0])
 			if !isAMatch {
@@ -113,7 +138,6 @@ func match(pattern string, text []byte) bool {
 	}
 
 	if pattern[0] == '^' {
-		fmt.Println("go here")
 
 		isAMatch, newText, newPattern := matchStartAnchor(text, pattern[1:])
 		if !isAMatch {
@@ -124,13 +148,12 @@ func match(pattern string, text []byte) bool {
 	}
 
 	if len(pattern) == 1 && pattern[0] == '$' {
-		fmt.Println("quchau")
 		return len(text) == 0
 	}
 
-	fmt.Println("normal check")
+	//If we reach this point, it means the pattern hasn't been fully matched yet
+	// if it doesn't match or there is no more text, its a no match and we return fail
 	if len(text) > 0 && pattern[0] == text[0] {
-		fmt.Println("normal match")
 		return match(pattern[1:], text[1:])
 
 	} else {
@@ -158,7 +181,6 @@ func isAlpha(c byte) bool {
 
 func matchPositiveGroupCharacter(c byte, pattern string) (bool, string) {
 
-	fmt.Println("pattern for positive group", pattern)
 	//Trick here is checking if there is one char equal to any from the ones in the pattern.
 	// The pattern already has trimmed the first [ need to iterate until the next ]
 	i := 0
@@ -186,8 +208,7 @@ func matchPositiveGroupCharacter(c byte, pattern string) (bool, string) {
 }
 
 func matchNegativeGroupCharacter(c byte, pattern string) (bool, string) {
-	//abc]m
-	fmt.Println("pattern for negative group", pattern)
+
 	//Trick here is checking if there is one char different from the ones in the pattern.
 	// The pattern already has trimmed the first [ need to iterate until the next ]
 	i := 0
@@ -210,7 +231,6 @@ func matchStartAnchor(text []byte, pattern string) (bool, []byte, string) {
 	i := 0
 
 	for i < len(pattern) {
-		fmt.Println("pat", pattern)
 		if pattern[i] == '$' {
 			return true, text[i:], pattern[i:]
 		}
