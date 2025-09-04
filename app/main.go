@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
-	"strings"
-	"unicode/utf8"
 )
 
 func main() {
@@ -38,102 +35,150 @@ func main() {
 
 func matchLine(line []byte, pattern string) (bool, error) {
 
-	if pattern == "\\w" {
-		validAlpha := isAlpha(line)
-		validDigit := isDigit(line)
+	for i := 0; i < len(line); i++ {
+		isMatch := match(pattern, line[i:])
 
-		return validAlpha || validDigit, nil
-	}
-
-	if pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
-		if pattern[1] == '^' {
-			return matchNegativeGroupCharacter(line, pattern), nil
+		if isMatch {
+			return true, nil
 		}
-		return matchPositiveCharacter(line, pattern), nil
 	}
 
-	if pattern == "\\d" {
+	return false, nil
 
-		ok := isDigit(line)
-		return ok, nil
-	}
-
-	if utf8.RuneCountInString(pattern) != 1 {
-		return false, fmt.Errorf("unsupported pattern: %q", pattern)
-	}
-
-	var ok bool
-
-	fmt.Fprintln(os.Stderr, "Logs from your program will appear here!")
-
-	ok = bytes.ContainsAny(line, pattern)
-
-	return ok, nil
 }
 
-func isDigit(line []byte) bool {
+func match(pattern string, text []byte) bool {
+
+	println("pattern len", len(pattern))
+	println("text len", len(text))
+
+	if len(pattern) == 0 {
+		fmt.Println("nice")
+		return true
+	}
+
+	if len(pattern) > 0 && len(text) == 0 {
+		fmt.Println("fail")
+		return false
+	}
+
+	println("current pattern", pattern)
+	println("current text", string(text))
+	println("current char", string(text[0]))
+
+	if pattern[0] == '\\' {
+
+		if pattern[1] == 'd' {
+			isAMatch := isDigit(text[0])
+			if !isAMatch {
+				return false
+			} else {
+				return match(pattern[2:], text[1:])
+			}
+		}
+
+		if pattern[1] == 'w' {
+			isAMatch := isAlpha(text[0]) || isDigit(text[0])
+			if !isAMatch {
+				return false
+			} else {
+				return match(pattern[2:], text[1:])
+			}
+		}
+
+	}
+
+	if pattern[0] == '[' {
+		if pattern[1] == '^' {
+			isAMatch, newPattern := matchNegativeGroupCharacter(text[0], pattern[2:])
+			if !isAMatch {
+				return false
+			} else {
+				return match(newPattern, text[1:])
+			}
+		} else {
+			isAMatch, newPattern := matchPositiveGroupCharacter(text[0], pattern[1:])
+			if !isAMatch {
+				return false
+			} else {
+				return match(newPattern, text[1:])
+			}
+		}
+
+	}
+	fmt.Println("normal check")
+	if pattern[0] == text[0] {
+		fmt.Println("normal match")
+		return match(pattern[1:], text[1:])
+
+	} else {
+		return false
+	}
+}
+
+func isDigit(c byte) bool {
 
 	//since line[i] returns the decimal of the byte value, we can compare directly
 	// to '0' and '9'
-	for i := range line {
-		if line[i] >= '0' && line[i] <= '9' {
-			return true
-		}
+	if c >= '0' && c <= '9' {
+		return true
 	}
 	return false
 
 }
 
-func isAlpha(line []byte) bool {
-	for i := range line {
-		if (line[i] >= 'a' && line[i] <= 'z') || (line[i] >= 'A' && line[i] <= 'Z') || (line[i] == '_') {
-			return true
-		}
+func isAlpha(c byte) bool {
+	if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_') {
+		return true
 	}
 	return false
 }
 
-func matchPositiveCharacter(line []byte, pattern string) bool {
+func matchPositiveGroupCharacter(c byte, pattern string) (bool, string) {
 
-	pattern = pattern[1 : len(pattern)-1]
+	fmt.Println("pattern for positive group", pattern)
+	//Trick here is checking if there is one char equal to any from the ones in the pattern.
+	// The pattern already has trimmed the first [ need to iterate until the next ]
+	i := 0
 
-	chars := strings.Split(pattern, "")
-
-	set := make(map[byte]struct{})
-	for _, v := range chars {
-		set[v[0]] = struct{}{}
-	}
-
-	for i := range line {
-
-		if _, ok := set[line[i]]; ok {
-			return true
+	//Here, we need to advance the i until the group ends
+	// event if the match happens early.
+	matchAny := false
+	for i < len(pattern) {
+		if pattern[i] == ']' {
+			break
 		}
+		if c == pattern[i] && !matchAny {
+			matchAny = true
+		}
+		i++
 	}
 
-	return false
+	if matchAny {
+		return true, pattern[i+1:]
+	} else {
+		fmt.Println("didn't match positive group")
+		return false, ""
+	}
+
 }
 
-func matchNegativeGroupCharacter(line []byte, pattern string) bool {
-
+func matchNegativeGroupCharacter(c byte, pattern string) (bool, string) {
+	//abc]m
+	fmt.Println("pattern for negative group", pattern)
 	//Trick here is checking if there is one char different from the ones in the pattern.
-	pattern = pattern[2 : len(pattern)-1]
-
-	chars := strings.Split(pattern, "")
-
-	fmt.Println("chars", chars)
-	set := make(map[byte]struct{})
-
-	for _, v := range chars {
-		set[v[0]] = struct{}{}
-	}
-
-	for i := range line {
-
-		if _, ok := set[line[i]]; !ok {
-			return true
+	// The pattern already has trimmed the first [ need to iterate until the next ]
+	i := 0
+	for i < len(pattern) {
+		if pattern[i] == ']' {
+			break
 		}
+		if c == pattern[i] {
+			return false, ""
+		}
+		i++
 	}
 
-	return false
+	return true, pattern[i+1:]
+
 }
