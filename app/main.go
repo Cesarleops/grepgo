@@ -37,8 +37,10 @@ func matchLine(line []byte, pattern string) (bool, error) {
 
 	for i := 0; i < len(line); i++ {
 		isMatch := match(pattern, line[i:])
+		fmt.Println("match", isMatch)
 
 		if pattern[0] == '^' && !isMatch {
+			fmt.Println("do i get here")
 			break
 		}
 
@@ -61,14 +63,13 @@ func match(pattern string, text []byte) bool {
 		return true
 	}
 
-	if len(pattern) > 0 && len(text) == 0 {
+	if (len(pattern) > 0 && pattern[len(pattern)-1] != '$') && len(text) == 0 {
 		fmt.Println("fail")
 		return false
 	}
 
 	println("current pattern", pattern)
 	println("current text", string(text))
-	println("current char", string(text[0]))
 
 	if pattern[0] == '\\' {
 
@@ -112,12 +113,19 @@ func match(pattern string, text []byte) bool {
 	}
 
 	if pattern[0] == '^' {
+		fmt.Println("go here")
+
 		isAMatch, newText, newPattern := matchStartAnchor(text, pattern[1:])
 		if !isAMatch {
 			return false
 		} else {
 			return match(newPattern, newText)
 		}
+	}
+
+	if len(pattern) == 1 && pattern[0] == '$' {
+		fmt.Println("quchau")
+		return len(text) == 0
 	}
 
 	fmt.Println("normal check")
@@ -200,9 +208,13 @@ func matchNegativeGroupCharacter(c byte, pattern string) (bool, string) {
 func matchStartAnchor(text []byte, pattern string) (bool, []byte, string) {
 
 	i := 0
-	for i < len(pattern) {
-		if text[i] != pattern[i] {
 
+	for i < len(pattern) {
+		fmt.Println("pat", pattern)
+		if pattern[i] == '$' {
+			return true, text[i:], pattern[i:]
+		}
+		if text[i] != pattern[i] {
 			return false, nil, ""
 		}
 		i++
