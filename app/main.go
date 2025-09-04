@@ -63,10 +63,10 @@ func match(pattern string, text []byte) bool {
 		return true
 	}
 
-	if (len(pattern) > 0 && pattern[len(pattern)-1] != '$') && len(text) == 0 {
-		fmt.Println("fail")
-		return false
-	}
+	// if len(pattern) > 0 && len(text) == 0 {
+	// 	fmt.Println("fail")
+	// 	return false
+	// }
 
 	println("current pattern", pattern)
 	println("current text", string(text))
@@ -129,7 +129,7 @@ func match(pattern string, text []byte) bool {
 	}
 
 	fmt.Println("normal check")
-	if pattern[0] == text[0] {
+	if len(text) > 0 && pattern[0] == text[0] {
 		fmt.Println("normal match")
 		return match(pattern[1:], text[1:])
 
