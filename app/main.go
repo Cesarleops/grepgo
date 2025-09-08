@@ -56,9 +56,6 @@ func matchLine(line []byte, pattern string) (bool, error) {
 
 func match(pattern string, text []byte) bool {
 
-	println("pattern len", len(pattern))
-	println("text len", len(text))
-
 	//This is our base case, if we reach the point were we consumed all the pattern
 	// without failure, it means we've found a match
 	if len(pattern) == 0 {
@@ -76,6 +73,10 @@ func match(pattern string, text []byte) bool {
 	if len(pattern) > 1 && pattern[1] == '+' {
 		return matchPlusQuantifier(text, pattern)
 
+	}
+
+	if len(text) > 0 && pattern[0] == '.' {
+		return matchesAnyCharacter(text, pattern)
 	}
 
 	//If the current char in the pattern it's a slash, it means is a character class
@@ -231,15 +232,30 @@ func matchPlusQuantifier(text []byte, pattern string) bool {
 	// after you are equal to x
 	letterToMatch := pattern[0]
 	fmt.Println("letter to match", string(letterToMatch))
+
+	if letterToMatch == '.' {
+		i := 1
+		for i < len(text) {
+			if text[i] == pattern[2] {
+				break
+			}
+			i++
+		}
+		return match(pattern[2:], text[i:])
+	}
+
 	//ca+r  caaaaaarla
 	if text[0] != letterToMatch {
 		fmt.Println("ups")
 		return false
 	}
+
+	//Start from 1 because we already read the current char
 	i := 1
 
 	//Need to be careful of not consuming the character in the pattern right after the +
 	// even if its the same
+
 	for i < len(text) {
 
 		if text[i] != letterToMatch {
@@ -270,4 +286,9 @@ func matchOptionalOperator(text []byte, pattern string) bool {
 	//Reaching here means the optional character does not exist, so we move in the pattern
 	// but did not read the text
 	return match(pattern[2:], text)
+}
+
+func matchesAnyCharacter(text []byte, pattern string) bool {
+	fmt.Println("breaks here")
+	return match(pattern[1:], text[1:])
 }
