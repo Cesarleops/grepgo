@@ -44,6 +44,7 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	for i := 0; i < len(line); i++ {
 
 		isMatch := match(pattern, line[i:])
+		fmt.Println("Pattern found ? ", isMatch)
 		if isMatch {
 			return true, nil
 		}
@@ -66,32 +67,14 @@ func match(pattern string, text []byte) bool {
 
 	println("current pattern", pattern)
 	println("current text", string(text))
+
+	if len(pattern) > 1 && pattern[1] == '?' {
+
+		return matchOptionalOperator(text, pattern)
+	}
+
 	if len(pattern) > 1 && pattern[1] == '+' {
-		//Here we need to answer the question, are you the letter x, or any of the letters
-		// after you are equal to x
-		letterToMatch := pattern[0]
-		fmt.Println("letter to match", string(letterToMatch))
-		//ca+r  caaaaaarla
-		if text[0] != letterToMatch {
-			fmt.Println("ups")
-			return false
-		}
-		i := 1
-
-		//Need to be careful of not consuming the character in the pattern right after the +
-		// even if its the same
-		for i < len(text) {
-
-			if text[i] != letterToMatch {
-				break
-			}
-			i++
-		}
-
-		if pattern[2] == letterToMatch {
-			return match(pattern[2:], text[i-1:])
-		}
-		return match(pattern[2:], text[i:])
+		return matchPlusQuantifier(text, pattern)
 
 	}
 
@@ -241,4 +224,50 @@ func matchStartAnchor(text []byte, pattern string) (bool, []byte, string) {
 	}
 
 	return true, text[i:], pattern[i:]
+}
+
+func matchPlusQuantifier(text []byte, pattern string) bool {
+	//Here we need to answer the question, are you the letter x, or any of the letters
+	// after you are equal to x
+	letterToMatch := pattern[0]
+	fmt.Println("letter to match", string(letterToMatch))
+	//ca+r  caaaaaarla
+	if text[0] != letterToMatch {
+		fmt.Println("ups")
+		return false
+	}
+	i := 1
+
+	//Need to be careful of not consuming the character in the pattern right after the +
+	// even if its the same
+	for i < len(text) {
+
+		if text[i] != letterToMatch {
+			break
+		}
+		i++
+	}
+
+	if pattern[2] == letterToMatch {
+		return match(pattern[2:], text[i-1:])
+	}
+	return match(pattern[2:], text[i:])
+}
+
+func matchOptionalOperator(text []byte, pattern string) bool {
+	charToIgnore := pattern[0]
+
+	// the current character is different from the optional one
+	if len(text) >= len(pattern)-1 {
+		fmt.Println("Text has the same characters that pattern, check if the character matches the optional")
+		if text[0] != charToIgnore {
+			return false
+		} else {
+			return match(pattern[2:], text[1:])
+		}
+	}
+
+	//Reaching here means the optional character does not exist, so we move in the pattern
+	// but did not read the text
+	return match(pattern[2:], text)
 }
